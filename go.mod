@@ -1,4 +1,4 @@
-module gin-logrus
+module github.com/jamesbuddrige/gin-logrus
 
 go 1.23.2
 

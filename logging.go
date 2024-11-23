@@ -1,7 +1,7 @@
 package gin_logrus
 
 import (
-	"gin-logrus/models"
+	"github.com/jamesbuddrige/gin-logrus/models"
 	"net/http"
 	"runtime"
 	"time"
