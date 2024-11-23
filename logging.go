@@ -32,7 +32,9 @@ func GinLogrus(logger *logrus.Logger) gin.HandlerFunc {
 
 		// If user exists in context, add user ID to log entry.
 		if user, ok := c.Get(UserClaimsKey); ok {
-			entry = entry.WithContext(c).WithField("user.id", user.(models.UserContext).UserID)
+			if userCtx, ok := user.(models.UserContext); ok {
+				entry = entry.WithContext(c.Request.Context()).WithField("user.id", userCtx.UserID)
+			}
 		}
 
 		if len(c.Errors) > 0 {
@@ -65,9 +67,10 @@ func RecoveryWithLoggerMiddleware(logger *logrus.Logger) gin.HandlerFunc {
 					"error.stack_trace": string(stack),
 				}).Error("A panic occurred")
 
-				if trace.SpanFromContext(c.Request.Context()).SpanContext().IsValid() {
+				span := trace.SpanFromContext(c.Request.Context())
+
+				if span.SpanContext().IsValid() {
 					// Set outcome
-					span := trace.SpanFromContext(c.Request.Context())
 					span.SetStatus(codes.Error, "panic occurred")
 				}
 
