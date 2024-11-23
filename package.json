@@ -1,7 +1,7 @@
 {
   "name": "gin-logrus",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.0-prerelease.1",
   "scripts": {
     "prepare": "husky install"
   },
