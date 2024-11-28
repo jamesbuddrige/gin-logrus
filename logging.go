@@ -1,7 +1,6 @@
 package gin_logrus
 
 import (
-	"github.com/jamesbuddrige/gin-logrus/models"
 	"net/http"
 	"runtime"
 	"time"
@@ -32,8 +31,10 @@ func GinLogrus(logger *logrus.Logger) gin.HandlerFunc {
 
 		// If user exists in context, add user ID to log entry.
 		if user, ok := c.Get(UserClaimsKey); ok {
-			if userCtx, ok := user.(models.UserContext); ok {
-				entry = entry.WithContext(c.Request.Context()).WithField("user.id", userCtx.UserID)
+			if userMap, ok := user.(map[string]interface{}); ok {
+				if userID, exists := userMap["UserID"].(string); exists {
+					entry = entry.WithContext(c.Request.Context()).WithField("user.id", userID)
+				}
 			}
 		}
 
@@ -117,7 +118,12 @@ func generateLogFields(c *gin.Context, start time.Time) logrus.Fields {
 
 	// If user exists in context, add user ID to fields.
 	if user, ok := c.Get(UserClaimsKey); ok {
-		fields["user.id"] = user.(models.UserContext).UserID
+		// Check if it's a map with string keys and interface{} values
+		if userMap, ok := user.(map[string]interface{}); ok {
+			if userID, exists := userMap["UserID"].(string); exists {
+				fields["user.id"] = userID
+			}
+		}
 	}
 
 	return fields
