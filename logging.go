@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
@@ -26,17 +27,31 @@ func GinLogrus(logger *logrus.Logger) gin.HandlerFunc {
 		// Generate log fields
 		fields := generateLogFields(c, start)
 
-		// Create log entry
-		entry := logger.WithFields(fields)
-
+		//
 		// If user exists in context, add user ID to log entry.
 		if user, ok := c.Get(UserClaimsKey); ok {
-			if userMap, ok := user.(map[string]interface{}); ok {
-				if userID, exists := userMap["UserID"].(string); exists {
-					entry = entry.WithContext(c.Request.Context()).WithField("user.id", userID)
+			// Assert the user context is a map or struct
+			switch user := user.(type) {
+			case map[string]interface{}:
+				// Handle as a map
+				if email, exists := user["Email"].(string); exists {
+					fields["user.email"] = email
 				}
+				if userID, exists := user["UserID"].(uuid.UUID); exists {
+					fields["user.id"] = userID.String()
+				}
+				if orgID, exists := user["OrganisationID"].(uuid.UUID); exists {
+					fields["labels.organisation_id"] = orgID.String()
+				}
+				if tenantID, exists := user["TenantID"].(uuid.UUID); exists {
+					fields["labels.tenant_id"] = tenantID.String()
+				}
+			default:
+				logger.Warnf("Unexpected user context type: %T", user)
 			}
 		}
+
+		entry := logger.WithFields(fields)
 
 		if len(c.Errors) > 0 {
 			// Append error field if this is an erroneous request.
@@ -115,16 +130,5 @@ func generateLogFields(c *gin.Context, start time.Time) logrus.Fields {
 		"event.start":               start.Format("2006-01-02T15:04:05.000Z"),
 		"event.end":                 time.Now().Format("2006-01-02T15:04:05.000Z"),
 	}
-
-	// If user exists in context, add user ID to fields.
-	if user, ok := c.Get(UserClaimsKey); ok {
-		// Check if it's a map with string keys and interface{} values
-		if userMap, ok := user.(map[string]interface{}); ok {
-			if userID, exists := userMap["UserID"].(string); exists {
-				fields["user.id"] = userID
-			}
-		}
-	}
-
 	return fields
 }
